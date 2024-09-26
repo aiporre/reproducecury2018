@@ -1,0 +1,3 @@
+nvcc -DEVAL=sGrad -D__TYPE__=double -DRADIALFUN=CauchyFunction -D__DIMPOINT__=3 -D__DIMVECT__=3 -DFUN=Cauchy -c KernelGpuConv.cu -o KernelGpuConv.o -arch sm_20 -std=c++11 -Wno-deprecated-gpu-targets -Xcompiler -fPIC -I /usr/local/MATLAB/R2014a/extern/include
+/usr/local/MATLAB/R2008b4/bin/mex -lcudart -lcufft -L/usr/local/cuda/lib64 -cxx -output ess KernelGpuConv.o
+
