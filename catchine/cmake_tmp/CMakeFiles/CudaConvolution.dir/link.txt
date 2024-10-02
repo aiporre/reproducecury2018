@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCudaConvolution.a CMakeFiles/CudaConvolution.dir/src/common/CudaConvolution_generated_GpuConv2D.cu.o
+/usr/bin/ranlib libCudaConvolution.a
