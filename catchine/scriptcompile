@@ -1,0 +1,20 @@
+
+cd $(dirname $0)
+
+if test $# -eq 0 
+then
+  $0 2
+  $0 3
+elif test $# -eq 1 
+then
+  rm -rf cmake_tmp/*
+  mkdir -p cmake_tmp
+  cd cmake_tmp
+  cmake .. -G"Unix Makefiles" -DDIM=$1 -DCMAKE_BUILD_TYPE:STRING=Release
+  make
+  cd ..
+else
+  echo "usage : $0, or $0 dim, where dim is the dimension in all code"
+fi
+
+

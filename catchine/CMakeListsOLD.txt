@@ -1,0 +1,202 @@
+cmake_minimum_required(VERSION 2.8)
+		
+#Déclaration du projet
+project(catchine)
+
+#Include directories
+include_directories(src/common)
+include_directories(blitz-0.9)
+include_directories(liblbfgs-1.10/include)
+include_directories(liblbfgs-1.10/lib)
+include_directories(dlib-18.1)
+include_directories(lbfgs-cpp-Quentin)
+include_directories(ANN)
+include_directories(FigTree)
+
+#default dimension of data is 3
+if(NOT DEFINED DIM)
+	set(DIM 3)
+endif(NOT DEFINED DIM)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__Dim__=${DIM}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-static-float-init -march=native")
+
+#set(CMAKE_C_COMPILER "gcc34")
+#set(CMAKE_CXX_COMPILER "g++34")
+
+# Release version by default
+if(NOT DEFINED CMAKE_BUILD_TYPE:STRING)
+	set(CMAKE_BUILD_TYPE:STRING Release)
+endif(NOT DEFINED CMAKE_BUILD_TYPE:STRING)
+
+if(NOT DEFINED ENABLEFGT)
+	set(ENABLEFGT NO)
+endif(NOT DEFINED ENABLEFGT)
+
+if(ENABLEFGT)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D FgtFlag=1")
+	#Génération de la liste des fichiers sources
+	file(
+		GLOB_RECURSE
+		source_files
+		src/common/*
+		FigTree/*
+	)
+	#Déclaration de l'exécutable
+	add_executable(
+		testFastGauss
+		src/testFastGauss.cpp
+		${source_files}
+	)
+else(ENABLEFGT)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D FgtFlag=0")
+	#Génération de la liste des fichiers sources
+	file(
+		GLOB_RECURSE
+		source_files
+		src/common/*
+	)
+endif(ENABLEFGT)
+
+#CUDA settings
+if(NOT DEFINED ENABLECUDA)
+	set(ENABLECUDA YES)
+endif(NOT DEFINED ENABLECUDA)
+if(NOT DEFINED USECUDADOUBLE)
+	set(USECUDADOUBLE NO)
+endif(NOT DEFINED USECUDADOUBLE)
+#project currently does not compile on Windows/cygwin with Cuda..
+if(CMAKE_SYSTEM_NAME MATCHES Windows)
+	set(ENABLECUDA NO)
+endif(CMAKE_SYSTEM_NAME MATCHES Windows)
+if(ENABLECUDA)
+	FIND_PACKAGE(CUDA)
+	find_library(CUDA_CUTIL_LIBRARY cutil "${CUDA_SDK_ROOT_DIR}/lib")
+endif(ENABLECUDA)
+
+if(ENABLECUDA AND CUDA_TOOLKIT_ROOT_DIR)
+
+	message("configuring with Cuda")
+
+    #set( my_cuda_flags -D__Dim__=${DIM};-gencode arch=compute_20,code=sm_20;-gencode arch=compute_30,code=sm_30;-gencode arch=compute_35,code=sm_35)
+    #set( my_cuda_flags -gencode arch=compute_20,code=sm_20)
+    #set( my_cuda_flags -gencode arch=compute_35,code=sm_35)
+    #set( my_cuda_flags -gencode arch=compute_13,code=sm_13)
+    set( my_cuda_flags -gencode arch=compute_72,code=sm_72)
+    list(APPEND CUDA_NVCC_FLAGS ${my_cuda_flags})
+
+# Library containing the Cuda operations
+    Set (LIB_TYPE STATIC)
+    Cuda_Add_Library (
+    CudaConvolution ${LIB_TYPE}
+        ${source_files}
+
+    )
+    Set (CUDA_LIBS ${CUDA_LIBS} CudaConvolution)
+
+	set(EXECUTABLE_OUTPUT_PATH ${catchine_SOURCE_DIR}/bin/)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D CudaFlag=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+	
+	#if(USECUDADOUBLE)
+	#	message("enabling double precision with Cuda (MAKE SURE YOUR GPU CAN HANDLE IT)")
+	#	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_13")
+	#endif(USECUDADOUBLE)
+
+	cuda_add_executable(
+		flow${DIM}D
+		src/flow.cpp
+		src/flow.h
+		#${source_files}
+	)
+	Target_Link_Libraries(flow${DIM}D ${CUDA_LIBS})
+
+	cuda_add_executable(
+		allflow${DIM}D
+		src/allflow.cpp
+		src/allflow.h
+		#${source_files}
+	)
+	Target_Link_Libraries(allflow${DIM}D ${CUDA_LIBS})
+
+	cuda_add_executable(
+		match${DIM}D
+		src/match.cpp
+		src/matching.h
+		#${source_files}
+	)
+	Target_Link_Libraries(match${DIM}D ${CUDA_LIBS})	
+	
+	cuda_add_executable(
+		shoot${DIM}D
+		src/shooting.cpp
+		src/shooting.h
+		#${source_files}
+	)
+	Target_Link_Libraries(shoot${DIM}D ${CUDA_LIBS})	
+
+	cuda_add_executable(
+		testGPU_Cauchy${DIM}D
+		src/testGPU_Cauchy.cpp
+		#${source_files}
+	)
+	Target_Link_Libraries(testGPU_Cauchy${DIM}D ${CUDA_LIBS})	
+
+	cuda_add_executable(
+		testGPU_Gauss${DIM}D
+		src/testGPU_Gauss.cpp
+		#${source_files}
+	)
+	Target_Link_Libraries(testGPU_Gauss${DIM}D ${CUDA_LIBS})	
+
+	cuda_add_executable(
+		testGPU_SumGauss${DIM}D
+		src/testGPU_SumGauss.cpp
+		#${source_files}
+	)
+	Target_Link_Libraries(testGPU_SumGauss${DIM}D ${CUDA_LIBS})	
+
+	cuda_add_executable(
+		testGPU_SumCauchy${DIM}D
+		src/testGPU_SumCauchy.cpp
+		#${source_files}
+	)
+	Target_Link_Libraries(testGPU_SumCauchy${DIM}D ${CUDA_LIBS})	
+	
+#target_link_libraries(testGPU_Cauchy ${CUDA_CUTIL_LIBRARY})
+
+else(ENABLECUDA AND CUDA_TOOLKIT_ROOT_DIR)
+
+	message("configuring without Cuda")
+
+	set(EXECUTABLE_OUTPUT_PATH "${catchine_SOURCE_DIR}/bin/")
+
+	add_executable(
+		flow${DIM}D
+		src/flow.cpp
+		src/flow.h
+		${source_files}
+	)
+
+	add_executable(
+		allflow${DIM}D
+		src/allflow.cpp
+		src/allflow.h
+		${source_files}
+	)
+
+	add_executable(
+		match${DIM}D
+		src/match.cpp
+		src/matching.h
+		${source_files}
+	)
+
+	add_executable(
+		shoot${DIM}D
+		src/shooting.cpp
+		src/shooting.h
+		${source_files}
+	)
+endif(ENABLECUDA AND CUDA_TOOLKIT_ROOT_DIR)

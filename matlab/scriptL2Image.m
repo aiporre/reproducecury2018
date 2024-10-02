@@ -1,8 +1,9 @@
-
 clear
 
+% Define grid size
 Ns = [30;30;3];
 
+% Create grids for xspec
 h1s = linspace(0,1,Ns(1)+1);
 h2s = linspace(0,1,Ns(2)+1);
 h3s = linspace(0,1,Ns(3)+1);
@@ -13,6 +14,7 @@ hzs = permute(hzs,[3,2,1]);
 xspec = [hxs(:),hys(:),hzs(:)]';
 s.xspec = xspec;
 
+% Create grids for x
 N = [30;30;3];
 h1 = linspace(0,1,N(1)+1);
 h2 = linspace(0,1,N(2)+1);
@@ -24,6 +26,7 @@ hz = permute(hz,[3,2,1]);
 x = [hx(:),hy(:),hz(:)]';
 s.x = x;
 
+% Set parameters for the structure s
 s.useDef = 'LargeDef';
 s.typefloat = 'double';
 s.CppKer.Type = 'CauchyGpu';
@@ -34,28 +37,26 @@ s.optim_useoptim = 'adaptdesc';
 s.optim_maxiter = 100;
 s.optim_stepsize = .1;
 
+% Configure target
 t.method = 'l2image';
 t.rx = 1:size(xspec,2);
 t.weight = 1;
 t.imsource = blobimage(Ns,.2,[.4;.5;.5]);
 t.imtarget = blobimage(Ns,.2,[.6;.5;.5]);
-% t.imsource = zeros(Ns');
-% t.imsource(3,3,1) = 1;
-% t.imtarget = zeros(Ns');
-% t.imtarget(3,2,1) = 1;
-% 
-t.basetarget = [0;0;0]; 
-t.voxsizetarget = [1;1;1]./Ns;  
 
+% Set target grid base and voxel size
+t.basetarget = [0;0;0];
+t.voxsizetarget = [1;1;1]./Ns;
+
+% Assign target to cell array
 target{1} = t;
+
+% Call matchCpp function
 s = matchCpp(s,target);
 
+% Plot results
 figure(1)
 clf
 hold on
-%plot3(s.x(1,:),s.x(2,:),s.x(3,:),'o')
-%plot3(s.phix(1,:),s.phix(2,:),s.phix(3,:),'*r')
 a=s.phix-s.x;
 quiver3(s.x(1,:),s.x(2,:),s.x(3,:),a(1,:),a(2,:),a(3,:),0)
-
-
